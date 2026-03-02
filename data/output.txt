@@ -1,0 +1,6 @@
+initialcoverage 0.7
+finalcoverage 0.92
+average_DE_dis 36.22663901771612
+average_move_dis 29.783011404979163
+needmovednum 11
+optimal_distance 18.96419916716446
