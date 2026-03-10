@@ -80,24 +80,15 @@ class DEAlgorithm:
         return random.random()
 
     def _allocate_arrays(self):
-        self.state.sensors = [Sensor(0, 0, 0) for _ in range(self.state.allsensornum + 1)]
         self.state.newmobiles = [Sensor(0, 0, 0) for _ in range(self.state.mobile_num + 1)]
-        self.state.staticpos = [0 for _ in range(self.state.static_num + 1)]
-        self.state.mobilepos = [0 for _ in range(self.state.mobile_num + 1)]
         self.state.mobileneedmoved = [True for _ in range(self.state.mobile_num + 1)]
         self.state.bestmobileposition = [Sensor(0, 0, 0) for _ in range(self.state.mobile_num + 1)]
         self.state.DEbestmobileposition = [Sensor(0, 0, 0) for _ in range(self.state.mobile_num + 1)]
-        self.state.ismobile = [False for _ in range(self.state.allsensornum + 1)]
         self.eval_results = [0.0 for _ in range(self.CHROMOSOME_NUM + 1)]
         self.state.gridcovered = [False for _ in range(GRID_NUM + 1)]
 
     def initialize(self):
-        self.state.transmission_range = DEF_TRANSMISSION_RANGE
-        self.state.sense_range = DEF_SENSE_RANGE
         self.state.mobile_percent = DEF_MOBILE_PERCENT if self.state.mobile_percent is None else self.state.mobile_percent
-        self.state.random_placed = False
-        self.state.network_random_generated = False
-        self.state.allsensornum = DEF_ALLSENSOR_NUM if self.state.allsensornum is None else self.state.allsensornum
         self.CHROMOSOME_NUM = self.state.de_population_size or DEF_CHROMOSOME_NUM
         self.F_FACTOR = self.state.de_factor or DEF_F_FACTOR
         self.Probability_Crossover = self.state.de_cross_prob or DEF_PROBABILITY_CROSSOVER
@@ -106,24 +97,21 @@ class DEAlgorithm:
         self.tao1 = DEF_TAO1
         self.tao2 = DEF_TAO2
         self.operator_kind = self.state.operator_kind
-        self.state.mobile_num = int(round(self.state.allsensornum * self.state.mobile_percent))
-        self.state.static_num = self.state.allsensornum - self.state.mobile_num
-        self.CHROMOSOME_LEN = 2 * self.state.mobile_num
-        self.state.transmission_range = 2.0 * PLACEMENT_UNIT * math.sqrt(60 / self.state.allsensornum)
-        self.state.sense_range = self.state.transmission_range / 2.0
-        self._allocate_arrays()
         base_dir = Path(__file__).resolve().parent.parent
         (base_dir / "result").mkdir(parents=True, exist_ok=True)
         self.output_file = (base_dir / "result" / "output.txt").open("w", encoding="utf-8", errors="ignore")
         self.coords_file = (base_dir / "result" / "coordinates.txt").open("w", encoding="utf-8", errors="ignore")
         if not self.state.network_random_generated:
             from .params import construct_real_WSN
-
             construct_real_WSN(self.state)
         else:
             from .params import construct_random_distribution_wsn
-
-            construct_random_distribution_wsn(FIELD_XA, FIELD_XB, FIELD_YA, FIELD_YB, self.state.allsensornum, self.state)
+            construct_random_distribution_wsn(FIELD_XA, FIELD_XB, FIELD_YA, FIELD_YB,
+                                              self.state.allsensornum or DEF_ALLSENSOR_NUM, self.state)
+        self.state.transmission_range = 2.0 * PLACEMENT_UNIT * math.sqrt(60 / self.state.allsensornum)
+        self.state.sense_range = self.state.transmission_range / 2.0
+        self.CHROMOSOME_LEN = 2 * self.state.mobile_num
+        self._allocate_arrays()
         random.seed()
         self.chromosomes = [[0 for _ in range(2 * self.state.mobile_num + 1)] for _ in range(self.CHROMOSOME_NUM + 1)]
         self.offspring = [[0 for _ in range(2 * self.state.mobile_num + 1)] for _ in range(self.CHROMOSOME_NUM + 1)]
