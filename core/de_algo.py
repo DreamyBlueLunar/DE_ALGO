@@ -2,6 +2,7 @@ import math
 import random
 import time
 from pathlib import Path
+from tkinter import messagebox
 from typing import List
 from .params import (
     GlobalState,
@@ -584,6 +585,7 @@ class DEAlgorithm:
             self.coords_file.close()
 
     def _post_optimize_discard(self):
+        finalcoverage_before = self.state.finalcoverage
         # =====================================================================
         # Scheme 1: sort edges by distance (descending), then check each mobile
         # =====================================================================
@@ -694,7 +696,19 @@ class DEAlgorithm:
         # =====================================================================
         # Compare scheme 1 and scheme 2, pick the better one
         # =====================================================================
-        if finalcoverage1 >= finalcoverage2:
+        if finalcoverage1 > finalcoverage2:
+            messagebox.showinfo(
+                "Discard优化",
+                f"第一种方案的覆盖率提高多,提高了{(finalcoverage1 - finalcoverage_before) * 100:.4f}%",
+            )
+            self.state.finalcoverage = finalcoverage1
+            self.state.average_move_dis = average_dist1
+            self.state.needmovednum = needmovednum1
+            self.state.mobileneedmoved = mobileneedmoved1
+            for k in range(1, self.state.mobile_num + 1):
+                self.state.bestmobileposition[k] = bestmobileposition1[k]
+        elif finalcoverage1 == finalcoverage2:
+            messagebox.showinfo("Discard优化", "两种方案的覆盖率相等")
             self.state.finalcoverage = finalcoverage1
             self.state.average_move_dis = average_dist1
             self.state.needmovednum = needmovednum1
@@ -702,6 +716,10 @@ class DEAlgorithm:
             for k in range(1, self.state.mobile_num + 1):
                 self.state.bestmobileposition[k] = bestmobileposition1[k]
         else:
+            messagebox.showinfo(
+                "Discard优化",
+                f"第二种方案的覆盖率提高多,提高了{(finalcoverage2 - finalcoverage_before) * 100:.4f}%",
+            )
             self.state.finalcoverage = finalcoverage2
             self.state.average_move_dis = average_dist2
             self.state.needmovednum = needmovednum2
@@ -804,8 +822,19 @@ class DEAlgorithm:
         for k in range(1, self.state.mobile_num + 1):
             SetSingleSensorCoverArea(self.state.optimalmatch[k], self.state)
         tempcoverage = compute_coverage(self.state)
-        if tempcoverage >= self.state.finalcoverage:
+        if tempcoverage > self.state.finalcoverage:
             self.state.finalcoverage = tempcoverage
+            messagebox.showinfo(
+                "Exchange优化",
+                "经过最后的移动节点和需要移动的节点交换移动后覆盖率变大！",
+            )
+        elif tempcoverage == self.state.finalcoverage:
+            messagebox.showinfo("Exchange优化", "覆盖率没变化")
+        else:
+            messagebox.showinfo(
+                "Exchange优化",
+                "覆盖率反而变小，不可能的事情发生！",
+            )
 
         self.state.optimal_distance = 0.0
         for k in range(1, self.state.mobile_num + 1):
