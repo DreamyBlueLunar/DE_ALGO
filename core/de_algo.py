@@ -156,6 +156,10 @@ class DEAlgorithm:
                 self.convergence.best_gene[k] = gene[k]
             self.tick2 = time.perf_counter()
 
+    # =========================================================================
+    # Evaluation functions
+    # =========================================================================
+
     def evaluate(self, chromosomes: List[List[int]]) -> List[float]:
         results = [0.0 for _ in range(self.CHROMOSOME_NUM + 1)]
         for i in range(1, self.CHROMOSOME_NUM + 1):
@@ -216,6 +220,10 @@ class DEAlgorithm:
             self._update_convergence(i, results[i], chromosomes[i])
         return results
 
+    # =========================================================================
+    # Standard DE mutation operators
+    # =========================================================================
+
     def _mutate_rand_1(self, chromosomes: List[List[int]], offspring: List[List[int]]):
         for i in range(1, self.CHROMOSOME_NUM + 1):
             r1 = self._rand_distinct(i, [])
@@ -231,13 +239,31 @@ class DEAlgorithm:
 
     def _mutate_best_1(self, chromosomes: List[List[int]], offspring: List[List[int]]):
         for i in range(1, self.CHROMOSOME_NUM + 1):
-            r2 = self._rand_distinct(i, [])
-            r3 = self._rand_distinct(i, [r2])
+            r1 = self._rand_distinct(i, [])
+            r2 = self._rand_distinct(i, [r1])
+            r3 = self._rand_distinct(i, [r1, r2])
             jrand = self._randrange(1, 2 * self.state.mobile_num + 1)
             for j in range(1, 2 * self.state.mobile_num + 1):
                 randreal = self._random_real()
                 if randreal < self.Probability_Crossover or j == jrand:
                     offspring[i][j] = self.convergence.best_gene[j] + int(round(self.F_FACTOR * (chromosomes[r2][j] - chromosomes[r3][j])))
+                else:
+                    offspring[i][j] = chromosomes[i][j]
+
+    def _mutate_best_2(self, chromosomes: List[List[int]], offspring: List[List[int]]):
+        for i in range(1, self.CHROMOSOME_NUM + 1):
+            r1 = self._rand_distinct(i, [])
+            r2 = self._rand_distinct(i, [r1])
+            r3 = self._rand_distinct(i, [r1, r2])
+            r4 = self._rand_distinct(i, [r1, r2, r3])
+            r5 = self._rand_distinct(i, [r1, r2, r3, r4])
+            jrand = self._randrange(1, 2 * self.state.mobile_num + 1)
+            for j in range(1, 2 * self.state.mobile_num + 1):
+                randreal = self._random_real()
+                if randreal < self.Probability_Crossover or j == jrand:
+                    offspring[i][j] = (self.convergence.best_gene[j]
+                                       + int(round(self.F_FACTOR * (chromosomes[r2][j] - chromosomes[r3][j])))
+                                       + int(round(self.F_FACTOR * (chromosomes[r4][j] - chromosomes[r5][j]))))
                 else:
                     offspring[i][j] = chromosomes[i][j]
 
@@ -252,19 +278,24 @@ class DEAlgorithm:
             for j in range(1, 2 * self.state.mobile_num + 1):
                 randreal = self._random_real()
                 if randreal < self.Probability_Crossover or j == jrand:
-                    offspring[i][j] = chromosomes[r1][j] + int(round(self.F_FACTOR * (chromosomes[r2][j] - chromosomes[r3][j]))) + int(round(self.F_FACTOR * (chromosomes[r4][j] - chromosomes[r5][j])))
+                    offspring[i][j] = (chromosomes[r1][j]
+                                       + int(round(self.F_FACTOR * (chromosomes[r2][j] - chromosomes[r3][j])))
+                                       + int(round(self.F_FACTOR * (chromosomes[r4][j] - chromosomes[r5][j]))))
                 else:
                     offspring[i][j] = chromosomes[i][j]
 
     def _mutate_current_to_best_1(self, chromosomes: List[List[int]], offspring: List[List[int]]):
         for i in range(1, self.CHROMOSOME_NUM + 1):
-            r2 = self._rand_distinct(i, [])
-            r3 = self._rand_distinct(i, [r2])
+            r1 = self._rand_distinct(i, [])
+            r2 = self._rand_distinct(i, [r1])
+            r3 = self._rand_distinct(i, [r1, r2])
             jrand = self._randrange(1, 2 * self.state.mobile_num + 1)
             for j in range(1, 2 * self.state.mobile_num + 1):
                 randreal = self._random_real()
                 if randreal < self.Probability_Crossover or j == jrand:
-                    offspring[i][j] = chromosomes[i][j] + int(round(self.F_FACTOR * (self.convergence.best_gene[j] - chromosomes[i][j]))) + int(round(self.F_FACTOR * (chromosomes[r2][j] - chromosomes[r3][j])))
+                    offspring[i][j] = (chromosomes[i][j]
+                                       + int(round(self.F_FACTOR * (self.convergence.best_gene[j] - chromosomes[i][j])))
+                                       + int(round(self.F_FACTOR * (chromosomes[r2][j] - chromosomes[r3][j]))))
                 else:
                     offspring[i][j] = chromosomes[i][j]
 
@@ -277,9 +308,133 @@ class DEAlgorithm:
             for j in range(1, 2 * self.state.mobile_num + 1):
                 randreal = self._random_real()
                 if randreal < self.Probability_Crossover or j == jrand:
-                    offspring[i][j] = chromosomes[r1][j] + int(round(self.F_FACTOR * (self.convergence.best_gene[j] - chromosomes[r1][j]))) + int(round(self.F_FACTOR * (chromosomes[r2][j] - chromosomes[r3][j])))
+                    offspring[i][j] = (chromosomes[r1][j]
+                                       + int(round(self.F_FACTOR * (self.convergence.best_gene[j] - chromosomes[r1][j])))
+                                       + int(round(self.F_FACTOR * (chromosomes[r2][j] - chromosomes[r3][j]))))
                 else:
                     offspring[i][j] = chromosomes[i][j]
+
+    # =========================================================================
+    # JDE adaptive mutation operators
+    # =========================================================================
+
+    def _mutate_rand_1_jde(self, chromosomes: List[List[int]], offspring: List[List[int]]):
+        for i in range(1, self.CHROMOSOME_NUM + 1):
+            r1 = self._rand_distinct(i, [])
+            r2 = self._rand_distinct(i, [r1])
+            r3 = self._rand_distinct(i, [r1, r2])
+            if self._random_real() < self.tao1:
+                self.Probability_Crossover_JDE[i] = self._random_real()
+            if self._random_real() < self.tao2:
+                self.F_Factor_JDE[i] = self._randrange(100, 1001) / 1000.0
+            jrand = self._randrange(1, 2 * self.state.mobile_num + 1)
+            for j in range(1, 2 * self.state.mobile_num + 1):
+                randreal = self._random_real()
+                if randreal < self.Probability_Crossover_JDE[i] or j == jrand:
+                    offspring[i][j] = chromosomes[r1][j] + int(round(self.F_Factor_JDE[i] * (chromosomes[r2][j] - chromosomes[r3][j])))
+                else:
+                    offspring[i][j] = chromosomes[i][j]
+
+    def _mutate_best_1_jde(self, chromosomes: List[List[int]], offspring: List[List[int]]):
+        for i in range(1, self.CHROMOSOME_NUM + 1):
+            r1 = self._rand_distinct(i, [])
+            r2 = self._rand_distinct(i, [r1])
+            r3 = self._rand_distinct(i, [r1, r2])
+            if self._random_real() < self.tao1:
+                self.Probability_Crossover_JDE[i] = self._random_real()
+            if self._random_real() < self.tao2:
+                self.F_Factor_JDE[i] = self._randrange(100, 1001) / 1000.0
+            jrand = self._randrange(1, 2 * self.state.mobile_num + 1)
+            for j in range(1, 2 * self.state.mobile_num + 1):
+                randreal = self._random_real()
+                if randreal < self.Probability_Crossover_JDE[i] or j == jrand:
+                    offspring[i][j] = self.convergence.best_gene[j] + int(round(self.F_Factor_JDE[i] * (chromosomes[r2][j] - chromosomes[r3][j])))
+                else:
+                    offspring[i][j] = chromosomes[i][j]
+
+    def _mutate_best_2_jde(self, chromosomes: List[List[int]], offspring: List[List[int]]):
+        for i in range(1, self.CHROMOSOME_NUM + 1):
+            r1 = self._rand_distinct(i, [])
+            r2 = self._rand_distinct(i, [r1])
+            r3 = self._rand_distinct(i, [r1, r2])
+            r4 = self._rand_distinct(i, [r1, r2, r3])
+            r5 = self._rand_distinct(i, [r1, r2, r3, r4])
+            if self._random_real() < self.tao1:
+                self.Probability_Crossover_JDE[i] = self._random_real()
+            if self._random_real() < self.tao2:
+                self.F_Factor_JDE[i] = self._randrange(100, 1001) / 1000.0
+            jrand = self._randrange(1, 2 * self.state.mobile_num + 1)
+            for j in range(1, 2 * self.state.mobile_num + 1):
+                randreal = self._random_real()
+                if randreal < self.Probability_Crossover_JDE[i] or j == jrand:
+                    offspring[i][j] = (self.convergence.best_gene[j]
+                                       + int(round(self.F_Factor_JDE[i] * (chromosomes[r2][j] - chromosomes[r3][j])))
+                                       + int(round(self.F_Factor_JDE[i] * (chromosomes[r4][j] - chromosomes[r5][j]))))
+                else:
+                    offspring[i][j] = chromosomes[i][j]
+
+    def _mutate_rand_2_jde(self, chromosomes: List[List[int]], offspring: List[List[int]]):
+        for i in range(1, self.CHROMOSOME_NUM + 1):
+            r1 = self._rand_distinct(i, [])
+            r2 = self._rand_distinct(i, [r1])
+            r3 = self._rand_distinct(i, [r1, r2])
+            r4 = self._rand_distinct(i, [r1, r2, r3])
+            r5 = self._rand_distinct(i, [r1, r2, r3, r4])
+            if self._random_real() < self.tao1:
+                self.Probability_Crossover_JDE[i] = self._random_real()
+            if self._random_real() < self.tao2:
+                self.F_Factor_JDE[i] = self._randrange(100, 1001) / 1000.0
+            jrand = self._randrange(1, 2 * self.state.mobile_num + 1)
+            for j in range(1, 2 * self.state.mobile_num + 1):
+                randreal = self._random_real()
+                if randreal < self.Probability_Crossover_JDE[i] or j == jrand:
+                    offspring[i][j] = (chromosomes[r1][j]
+                                       + int(round(self.F_Factor_JDE[i] * (chromosomes[r2][j] - chromosomes[r3][j])))
+                                       + int(round(self.F_Factor_JDE[i] * (chromosomes[r4][j] - chromosomes[r5][j]))))
+                else:
+                    offspring[i][j] = chromosomes[i][j]
+
+    def _mutate_current_to_best_1_jde(self, chromosomes: List[List[int]], offspring: List[List[int]]):
+        for i in range(1, self.CHROMOSOME_NUM + 1):
+            r1 = self._rand_distinct(i, [])
+            r2 = self._rand_distinct(i, [r1])
+            r3 = self._rand_distinct(i, [r1, r2])
+            if self._random_real() < self.tao1:
+                self.Probability_Crossover_JDE[i] = self._random_real()
+            if self._random_real() < self.tao2:
+                self.F_Factor_JDE[i] = self._randrange(100, 1001) / 1000.0
+            jrand = self._randrange(1, 2 * self.state.mobile_num + 1)
+            for j in range(1, 2 * self.state.mobile_num + 1):
+                randreal = self._random_real()
+                if randreal < self.Probability_Crossover_JDE[i] or j == jrand:
+                    offspring[i][j] = (chromosomes[i][j]
+                                       + int(round(self.F_Factor_JDE[i] * (self.convergence.best_gene[j] - chromosomes[i][j])))
+                                       + int(round(self.F_Factor_JDE[i] * (chromosomes[r2][j] - chromosomes[r3][j]))))
+                else:
+                    offspring[i][j] = chromosomes[i][j]
+
+    def _mutate_rand_to_best_1_jde(self, chromosomes: List[List[int]], offspring: List[List[int]]):
+        for i in range(1, self.CHROMOSOME_NUM + 1):
+            r1 = self._rand_distinct(i, [])
+            r2 = self._rand_distinct(i, [r1])
+            r3 = self._rand_distinct(i, [r1, r2])
+            if self._random_real() < self.tao1:
+                self.Probability_Crossover_JDE[i] = self._random_real()
+            if self._random_real() < self.tao2:
+                self.F_Factor_JDE[i] = self._randrange(100, 1001) / 1000.0
+            jrand = self._randrange(1, 2 * self.state.mobile_num + 1)
+            for j in range(1, 2 * self.state.mobile_num + 1):
+                randreal = self._random_real()
+                if randreal < self.Probability_Crossover_JDE[i] or j == jrand:
+                    offspring[i][j] = (chromosomes[r1][j]
+                                       + int(round(self.F_Factor_JDE[i] * (self.convergence.best_gene[j] - chromosomes[r1][j])))
+                                       + int(round(self.F_Factor_JDE[i] * (chromosomes[r2][j] - chromosomes[r3][j]))))
+                else:
+                    offspring[i][j] = chromosomes[i][j]
+
+    # =========================================================================
+    # Helper functions
+    # =========================================================================
 
     def _rand_distinct(self, i: int, taken: List[int]) -> int:
         while True:
@@ -297,6 +452,22 @@ class DEAlgorithm:
                 if y > FIELD_YB or y < FIELD_YA:
                     chromosomes[i][2 * j] = self._randrange(FIELD_YA, FIELD_YB + 1)
 
+    def _out_of_bound_clamp(self, chromosomes: List[List[int]]):
+        for i in range(1, self.CHROMOSOME_NUM + 1):
+            for j in range(1, self.state.mobile_num + 1):
+                if chromosomes[i][2 * j - 1] > FIELD_XB:
+                    chromosomes[i][2 * j - 1] = FIELD_XB
+                if chromosomes[i][2 * j - 1] < FIELD_XA:
+                    chromosomes[i][2 * j - 1] = FIELD_XA
+                if chromosomes[i][2 * j] > FIELD_YB:
+                    chromosomes[i][2 * j] = FIELD_YB
+                if chromosomes[i][2 * j] < FIELD_YA:
+                    chromosomes[i][2 * j] = FIELD_YA
+
+    # =========================================================================
+    # Main algorithm loops
+    # =========================================================================
+
     def run_simple_de(self):
         self.tick1 = time.perf_counter()
         self.initialize()
@@ -305,7 +476,7 @@ class DEAlgorithm:
             if self.operator_kind == 0:
                 self._mutate_best_1(self.chromosomes, self.offspring)
             elif self.operator_kind == 1:
-                self._mutate_rand_2(self.chromosomes, self.offspring)
+                self._mutate_best_2(self.chromosomes, self.offspring)
             elif self.operator_kind == 2:
                 self._mutate_rand_1(self.chromosomes, self.offspring)
             elif self.operator_kind == 3:
@@ -331,18 +502,18 @@ class DEAlgorithm:
         while self.generation <= self.Max_Generations:
             self.F_FACTOR = (1 - self.generation / self.Max_Generations) * DEF_F_FACTOR
             if self.operator_kind == 0:
-                self._mutate_best_1(self.chromosomes, self.offspring)
+                self._mutate_best_1_jde(self.chromosomes, self.offspring)
             elif self.operator_kind == 1:
-                self._mutate_rand_2(self.chromosomes, self.offspring)
+                self._mutate_best_2_jde(self.chromosomes, self.offspring)
             elif self.operator_kind == 2:
-                self._mutate_rand_1(self.chromosomes, self.offspring)
+                self._mutate_rand_1_jde(self.chromosomes, self.offspring)
             elif self.operator_kind == 3:
-                self._mutate_rand_2(self.chromosomes, self.offspring)
+                self._mutate_rand_2_jde(self.chromosomes, self.offspring)
             elif self.operator_kind == 4:
-                self._mutate_current_to_best_1(self.chromosomes, self.offspring)
+                self._mutate_current_to_best_1_jde(self.chromosomes, self.offspring)
             elif self.operator_kind == 5:
-                self._mutate_rand_to_best_1(self.chromosomes, self.offspring)
-            self._out_of_bound_random(self.offspring)
+                self._mutate_rand_to_best_1_jde(self.chromosomes, self.offspring)
+            self._out_of_bound_clamp(self.offspring)
             self.eval_results = self.evaluate(self.chromosomes)
             self.offspring_results = self.evaluate(self.offspring)
             for i in range(1, self.CHROMOSOME_NUM + 1):
@@ -351,6 +522,10 @@ class DEAlgorithm:
                         self.chromosomes[i][j] = self.offspring[i][j]
             self.generation += 1
         self._finalize_results()
+
+    # =========================================================================
+    # Post-optimization and result finalization
+    # =========================================================================
 
     def _finalize_results(self):
         self.convergence.spenttime = self.tick2 - self.tick1 if hasattr(self, "tick2") else 0.0
@@ -374,7 +549,6 @@ class DEAlgorithm:
         self._post_optimize_discard()
         self.tick3 = time.perf_counter()
         self._post_optimize_exchange()
-        # write summaries to files
         try:
             if self.output_file:
                 self.output_file.write(f"InitialCoverage: {self.state.initialcoverage:.6f}\n")
@@ -410,19 +584,32 @@ class DEAlgorithm:
             self.coords_file.close()
 
     def _post_optimize_discard(self):
+        # =====================================================================
+        # Scheme 1: sort edges by distance (descending), then check each mobile
+        # =====================================================================
+        mobileneedmoved1 = [True for _ in range(self.state.mobile_num + 1)]
+
         edges = []
         for k in range(1, self.state.mobile_num + 1):
             dx = self.state.sensors[self.state.mobilepos[k]].x - self.state.DEbestmobileposition[k].x
             dy = self.state.sensors[self.state.mobilepos[k]].y - self.state.DEbestmobileposition[k].y
             edges.append((k, math.sqrt(dx * dx + dy * dy)))
         edges.sort(key=lambda x: x[1], reverse=True)
+
         needmovednum1 = self.state.mobile_num
         finalcoverage1 = self.state.finalcoverage
-        mobileneedmoved1 = [True for _ in range(self.state.mobile_num + 1)]
-        for _, m in edges:
-            idx = _
-            temp_sensor = self.state.bestmobileposition[idx]
-            self.state.bestmobileposition[idx] = self.state.sensors[self.state.mobilepos[idx]]
+
+        for idx, _ in edges:
+            temp_sensor = Sensor(
+                self.state.bestmobileposition[idx].x,
+                self.state.bestmobileposition[idx].y,
+                self.state.bestmobileposition[idx].id,
+            )
+            self.state.bestmobileposition[idx] = Sensor(
+                self.state.sensors[self.state.mobilepos[idx]].x,
+                self.state.sensors[self.state.mobilepos[idx]].y,
+                self.state.sensors[self.state.mobilepos[idx]].id,
+            )
             initialize_grid_static_covered(self.state)
             for k in range(1, self.state.mobile_num + 1):
                 SetSingleSensorCoverArea(self.state.bestmobileposition[k], self.state)
@@ -436,18 +623,89 @@ class DEAlgorithm:
                 needmovednum1 -= 1
                 mobileneedmoved1[idx] = False
                 finalcoverage1 = tempcoverage
+
         initialize_grid_static_covered(self.state)
         for k in range(1, self.state.mobile_num + 1):
             SetSingleSensorCoverArea(self.state.DEbestmobileposition[k], self.state)
-        self.state.average_move_dis = 0.0
+
+        average_dist1 = 0.0
         for k in range(1, self.state.mobile_num + 1):
             dx = self.state.sensors[self.state.mobilepos[k]].x - self.state.bestmobileposition[k].x
             dy = self.state.sensors[self.state.mobilepos[k]].y - self.state.bestmobileposition[k].y
-            self.state.average_move_dis += math.sqrt(dx * dx + dy * dy)
-        self.state.average_move_dis /= max(1, self.state.mobile_num)
-        self.state.finalcoverage = finalcoverage1
-        self.state.needmovednum = needmovednum1
-        self.state.mobileneedmoved = mobileneedmoved1
+            average_dist1 += math.sqrt(dx * dx + dy * dy)
+        average_dist1 /= max(1, self.state.mobile_num)
+
+        bestmobileposition1 = [Sensor(0, 0, 0) for _ in range(self.state.mobile_num + 1)]
+        for k in range(1, self.state.mobile_num + 1):
+            bestmobileposition1[k] = Sensor(
+                self.state.bestmobileposition[k].x,
+                self.state.bestmobileposition[k].y,
+                self.state.bestmobileposition[k].id,
+            )
+            self.state.bestmobileposition[k] = Sensor(
+                self.state.DEbestmobileposition[k].x,
+                self.state.DEbestmobileposition[k].y,
+                self.state.DEbestmobileposition[k].id,
+            )
+
+        # =====================================================================
+        # Scheme 2: check each mobile in index order
+        # =====================================================================
+        mobileneedmoved2 = [True for _ in range(self.state.mobile_num + 1)]
+        needmovednum2 = self.state.mobile_num
+        finalcoverage2 = self.state.finalcoverage
+
+        for j in range(1, self.state.mobile_num + 1):
+            temp_sensor = Sensor(
+                self.state.bestmobileposition[j].x,
+                self.state.bestmobileposition[j].y,
+                self.state.bestmobileposition[j].id,
+            )
+            self.state.bestmobileposition[j] = Sensor(
+                self.state.sensors[self.state.mobilepos[j]].x,
+                self.state.sensors[self.state.mobilepos[j]].y,
+                self.state.sensors[self.state.mobilepos[j]].id,
+            )
+            initialize_grid_static_covered(self.state)
+            for k in range(1, self.state.mobile_num + 1):
+                SetSingleSensorCoverArea(self.state.bestmobileposition[k], self.state)
+            tempcoverage = compute_coverage(self.state)
+            if tempcoverage == finalcoverage2:
+                needmovednum2 -= 1
+                mobileneedmoved2[j] = False
+            elif tempcoverage < finalcoverage2:
+                self.state.bestmobileposition[j] = temp_sensor
+            elif tempcoverage > finalcoverage2:
+                needmovednum2 -= 1
+                mobileneedmoved2[j] = False
+                finalcoverage2 = tempcoverage
+
+        initialize_grid_static_covered(self.state)
+        for k in range(1, self.state.mobile_num + 1):
+            SetSingleSensorCoverArea(self.state.DEbestmobileposition[k], self.state)
+
+        average_dist2 = 0.0
+        for k in range(1, self.state.mobile_num + 1):
+            dx = self.state.sensors[self.state.mobilepos[k]].x - self.state.bestmobileposition[k].x
+            dy = self.state.sensors[self.state.mobilepos[k]].y - self.state.bestmobileposition[k].y
+            average_dist2 += math.sqrt(dx * dx + dy * dy)
+        average_dist2 /= max(1, self.state.mobile_num)
+
+        # =====================================================================
+        # Compare scheme 1 and scheme 2, pick the better one
+        # =====================================================================
+        if finalcoverage1 >= finalcoverage2:
+            self.state.finalcoverage = finalcoverage1
+            self.state.average_move_dis = average_dist1
+            self.state.needmovednum = needmovednum1
+            self.state.mobileneedmoved = mobileneedmoved1
+            for k in range(1, self.state.mobile_num + 1):
+                self.state.bestmobileposition[k] = bestmobileposition1[k]
+        else:
+            self.state.finalcoverage = finalcoverage2
+            self.state.average_move_dis = average_dist2
+            self.state.needmovednum = needmovednum2
+            self.state.mobileneedmoved = mobileneedmoved2
 
     def _post_optimize_exchange(self):
         origin = [Sensor(0, 0, 0) for _ in range(self.state.mobile_num + 1)]
@@ -457,6 +715,16 @@ class DEAlgorithm:
             origin[i] = Sensor(s.x, s.y, i)
             p = self.state.bestmobileposition[i]
             pos[i] = Sensor(p.x, p.y, i)
+
+        bestmobileposition1 = [Sensor(0, 0, 0) for _ in range(self.state.mobile_num + 1)]
+        for k in range(1, self.state.mobile_num + 1):
+            bestmobileposition1[k] = Sensor(
+                self.state.bestmobileposition[k].x,
+                self.state.bestmobileposition[k].y,
+                self.state.bestmobileposition[k].id,
+            )
+
+        # Part 1: pairwise exchange for nodes that need to move
         for i in range(1, self.state.mobile_num + 1):
             if not self.state.mobileneedmoved[i]:
                 continue
@@ -481,16 +749,64 @@ class DEAlgorithm:
                     pos[j] = temp
                     pos[i].id = i
                     pos[j].id = j
+
+        # Part 2: swap between need-to-move and don't-need-to-move nodes
+        for i in range(1, self.state.mobile_num + 1):
+            if self.state.mobileneedmoved[i]:
+                for j in range(1, self.state.mobile_num + 1):
+                    if not self.state.mobileneedmoved[j]:
+                        dx = origin[i].x - pos[i].x
+                        dy = origin[i].y - pos[i].y
+                        dist1 = dx * dx + dy * dy
+                        dx = origin[j].x - pos[i].x
+                        dy = origin[j].y - pos[i].y
+                        dist2 = dx * dx + dy * dy
+                        if dist1 > dist2:
+                            temp_sensor = Sensor(
+                                bestmobileposition1[j].x,
+                                bestmobileposition1[j].y,
+                                bestmobileposition1[j].id,
+                            )
+                            bestmobileposition1[j] = Sensor(
+                                bestmobileposition1[i].x,
+                                bestmobileposition1[i].y,
+                                j,
+                            )
+                            bestmobileposition1[i] = Sensor(
+                                origin[i].x,
+                                origin[i].y,
+                                i,
+                            )
+                            initialize_grid_static_covered(self.state)
+                            for k in range(1, self.state.mobile_num + 1):
+                                SetSingleSensorCoverArea(bestmobileposition1[k], self.state)
+                            tempcoverage = compute_coverage(self.state)
+                            if tempcoverage < self.state.finalcoverage:
+                                bestmobileposition1[i] = Sensor(
+                                    bestmobileposition1[j].x,
+                                    bestmobileposition1[j].y,
+                                    i,
+                                )
+                                bestmobileposition1[j] = temp_sensor
+                            if tempcoverage >= self.state.finalcoverage:
+                                pos[j] = Sensor(pos[i].x, pos[i].y, j)
+                                pos[i] = Sensor(origin[i].x, origin[i].y, i)
+                                self.state.mobileneedmoved[i] = False
+                                self.state.mobileneedmoved[j] = True
+                                self.state.finalcoverage = tempcoverage
+
         self.state.optimalmatch = [Sensor(0, 0, 0) for _ in range(self.state.mobile_num + 1)]
         for i in range(1, self.state.mobile_num + 1):
             s = pos[i]
             self.state.optimalmatch[i] = Sensor(s.x, s.y, self.state.sensors[self.state.mobilepos[i]].id)
+
         initialize_grid_static_covered(self.state)
         for k in range(1, self.state.mobile_num + 1):
             SetSingleSensorCoverArea(self.state.optimalmatch[k], self.state)
         tempcoverage = compute_coverage(self.state)
         if tempcoverage >= self.state.finalcoverage:
             self.state.finalcoverage = tempcoverage
+
         self.state.optimal_distance = 0.0
         for k in range(1, self.state.mobile_num + 1):
             dx = self.state.sensors[self.state.mobilepos[k]].x - self.state.optimalmatch[k].x
